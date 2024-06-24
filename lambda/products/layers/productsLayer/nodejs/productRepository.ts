@@ -7,6 +7,7 @@ export interface Product {
   code: string
   price: number
   model: string
+  productUrl: string
 }
 
 export class ProductRepository {
@@ -39,6 +40,26 @@ export class ProductRepository {
     } else {
       throw new Error('Product not found')
     }
+  }
+
+  async getProductsByIds(productsIds: string[]): Promise<Product[]> {
+    const keys: { id: string }[] = []
+
+    productsIds.forEach((productId) => {
+      keys.push({
+        id: productId
+      })
+    })
+
+    const data = await this.ddbClient.batchGet({
+      RequestItems: {
+        [this.productsDdb]: {
+          Keys: keys
+        }
+      }
+    }).promise()
+
+    return data.Responses![this.productsDdb] as Product[]
   }
 
   async create(product: Product): Promise<Product> {
@@ -76,12 +97,13 @@ export class ProductRepository {
       },
       ConditionExpression: 'attribute_exists(id)',
       ReturnValues: 'UPDATED_NEW',
-      UpdateExpression: 'set productName = :name, code = :code, price = :price, model = :model',
+      UpdateExpression: 'set productName = :name, code = :code, price = :price, model = :model, productUrl = :productUrl',
       ExpressionAttributeValues: {
         ':name': product.productName,
         ':code': product.code,
         ':price': product.price,
-        ':model': product.model
+        ':model': product.model,
+        ':productUrl': product.productUrl
       }
     }).promise()
 

@@ -7,6 +7,7 @@ import { Construct  } from 'constructs'
 interface ECommerceApiStackProps extends cdk.StackProps {
   productsFetchHandler: lambdaNodeJs.NodejsFunction
   productsAdminHandler: lambdaNodeJs.NodejsFunction
+  ordersHandler: lambdaNodeJs.NodejsFunction
 }
 
 export class EcommerceApiStack extends cdk.Stack {
@@ -38,6 +39,40 @@ export class EcommerceApiStack extends cdk.Stack {
       }
     })
 
+    this.createProductsService(props, api)
+    this.createOrdersService(props, api)
+  }
+
+  private createOrdersService(props: ECommerceApiStackProps, api: apiGateway.RestApi) {
+    const ordersIntegration = new apiGateway.LambdaIntegration(props.ordersHandler)
+
+    // resource - /orders
+    const ordersResource = api.root.addResource('orders')
+
+    // GET /orders
+    // GET /orders?email=email
+    // GET /orders?email=email&orderId=123
+    ordersResource.addMethod('GET', ordersIntegration)
+
+    const orderDeletionValidator = new apiGateway.RequestValidator(this, 'OrderDeletionValidator', {
+      restApi: api,
+      requestValidatorName: 'OrderDeletionValidator',
+      validateRequestParameters: true,
+    })
+    // DELETE /orders?email=email&orderId=123
+    ordersResource.addMethod('DELETE', ordersIntegration, {
+      requestParameters: {
+        'method.request.querystring.email': true,
+        'method.request.querystring.orderId': true,
+      },
+      requestValidator: orderDeletionValidator
+    })
+
+    // POST /orders
+    ordersResource.addMethod('POST', ordersIntegration)
+  }
+
+  private createProductsService(props: ECommerceApiStackProps, api: apiGateway.RestApi) {
     const productsFetchIntegration = new apiGateway.LambdaIntegration(props.productsFetchHandler)
 
     // GET "/products"
