@@ -101,7 +101,7 @@ export class EcommerceApiStack extends cdk.Stack {
     ordersResource.addMethod('POST', ordersIntegration, {
       requestValidator: orderRequestValidation,
       requestModels: {
-        "application/json": orderModel
+        'application/json': orderModel
       }
     })
   }
@@ -119,11 +119,49 @@ export class EcommerceApiStack extends cdk.Stack {
 
     const productsAdminIntegration = new apiGateway.LambdaIntegration(props.productsAdminHandler)
 
+    const productRequestValidator = new apiGateway.RequestValidator(this, 'ProductRequestValidator', {
+      restApi: api,
+      requestValidatorName: 'ProductRequestValidator',
+      validateRequestParameters: true
+    })
+    const productModel = new apiGateway.Model(this, 'ProductModel', {
+      modelName: 'ProductModel',
+      restApi: api,
+      schema: {
+        type: apiGateway.JsonSchemaType.OBJECT,
+        properties: {
+          productName: {
+            type: apiGateway.JsonSchemaType.STRING
+          },
+          code: {
+            type: apiGateway.JsonSchemaType.STRING
+          },
+          productUrl: {
+            type: apiGateway.JsonSchemaType.STRING
+          },
+          price: {
+            type: apiGateway.JsonSchemaType.NUMBER
+          },
+        },
+        required: ['productName', 'code']
+      }
+    })
+
     // POST "/products"
-    productsResource.addMethod('POST', productsAdminIntegration)
+    productsResource.addMethod('POST', productsAdminIntegration, {
+      requestValidator: productRequestValidator,
+      requestModels: {
+        'application/json': productModel
+      }
+    })
 
     // PUT "/products/{id}"
-    productIdResource.addMethod('PUT', productsAdminIntegration)
+    productIdResource.addMethod('PUT', productsAdminIntegration, {
+      requestValidator: productRequestValidator,
+      requestModels: {
+        'application/json': productModel
+      }
+    })
 
     // DELETE "/products/{id}"
     productIdResource.addMethod('DELETE', productsAdminIntegration)
