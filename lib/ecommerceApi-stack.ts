@@ -69,7 +69,41 @@ export class EcommerceApiStack extends cdk.Stack {
     })
 
     // POST /orders
-    ordersResource.addMethod('POST', ordersIntegration)
+    const orderRequestValidation = new apiGateway.RequestValidator(this, 'OrderRequestValidator', {
+      restApi: api,
+      requestValidatorName: 'OrderRequestValidator',
+      validateRequestParameters: true
+    })
+    const orderModel = new apiGateway.Model(this, 'OrderModel', {
+      modelName: 'OrderModel',
+      restApi: api,
+      schema: {
+        type: apiGateway.JsonSchemaType.OBJECT,
+        properties: {
+          email: {
+            type: apiGateway.JsonSchemaType.STRING
+          },
+          productIds: {
+            type: apiGateway.JsonSchemaType.ARRAY,
+            minItems: 1,
+            items: {
+              type: apiGateway.JsonSchemaType.STRING
+            }
+          },
+          payment: {
+            type: apiGateway.JsonSchemaType.STRING,
+            enum: ['CASH', 'DEBIT_CARD', 'CREDIT_CARD']
+          },
+        },
+        required: ['email', 'productsIds', 'payment']
+      }
+    })
+    ordersResource.addMethod('POST', ordersIntegration, {
+      requestValidator: orderRequestValidation,
+      requestModels: {
+        "application/json": orderModel
+      }
+    })
   }
 
   private createProductsService(props: ECommerceApiStackProps, api: apiGateway.RestApi) {
